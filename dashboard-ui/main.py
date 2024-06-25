@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, redirect, url_for, session
 import paho.mqtt.client as mqtt_client
 import json
 import time
@@ -76,9 +76,32 @@ client.username_pw_set(username, password)
 client.connect(broker, port)
 client.loop_start()
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+# Dữ liệu mẫu về người dùng (thông tin user/password)
+app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
+users = {
+    'admin': 'Hongduc@123',
+    'hongduc': 'Hongduc@123'
+}
+
+@app.route('/', methods=['GET', 'POST'])
+def login():
+    error = None
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        if username in users and users[username] == password:
+            session['username'] = username
+            return redirect(url_for('dashboard'))
+        else:
+            error = 'Username hoặc Password không chính xác. Vui lòng thử lại.'
+    return render_template('login.html', error=error)
+
+@app.route('/dashboard')
+def dashboard():
+    if 'username' in session:
+        return render_template('index.html')
+    else:
+        return redirect(url_for('login'))
 
 @app.route('/data')
 def get_data():
@@ -134,4 +157,4 @@ def auto(device_id, min, max):
     toggle(device_id, turn_on)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(port=5002, debug=True)
